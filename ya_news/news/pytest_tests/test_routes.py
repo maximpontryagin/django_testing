@@ -1,6 +1,6 @@
 from http import HTTPStatus
-import pytest
 
+import pytest
 from django.urls import reverse
 from pytest_django.asserts import assertRedirects
 
@@ -26,19 +26,20 @@ def test_pages_availability_for_anonymous_user(client, name, news_object):
 
 
 @pytest.mark.parametrize(
-    'parametrized_client, expected_status',
+    'parametrized_client, expected_status, url',
     (
-        (pytest.lazy_fixture('admin_client'), HTTPStatus.NOT_FOUND),
-        (pytest.lazy_fixture('author_client'), HTTPStatus.OK)
+        (pytest.lazy_fixture('admin_client'), HTTPStatus.NOT_FOUND,
+         pytest.lazy_fixture('delete_url')),
+        (pytest.lazy_fixture('admin_client'), HTTPStatus.NOT_FOUND,
+         pytest.lazy_fixture('edit_url')),
+        (pytest.lazy_fixture('author_client'), HTTPStatus.OK,
+         pytest.lazy_fixture('delete_url')),
+        (pytest.lazy_fixture('author_client'), HTTPStatus.OK,
+         pytest.lazy_fixture('edit_url')),
     ),
 )
-@pytest.mark.parametrize(
-    'name',
-    ('news:delete', 'news:edit'),
-)
 def test_pages_availability_for_auth_user(parametrized_client,
-                                          name, comment, expected_status):
-    url = reverse(name, args=('1'))
+                                          url, comment, expected_status):
     response = parametrized_client.get(url)
     assert response.status_code == expected_status
 

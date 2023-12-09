@@ -1,12 +1,9 @@
 from http import HTTPStatus
 
-from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.test import Client, TestCase
 from django.urls import reverse
 from notes.models import Note
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.urls import reverse
-
 
 User = get_user_model()
 
@@ -16,7 +13,11 @@ class TestRoutes(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.author = User.objects.create(username='Автор')
+        cls.auth_author = Client()
+        cls.auth_author.force_login(cls.author)
         cls.reader = User.objects.create(username='Неавтор')
+        cls.auth_reader = Client()
+        cls.auth_reader.force_login(cls.reader)
         cls.note = Note.objects.create(title='Заголовок', text='Текст',
                                        slug='slug', author=cls.author)
 
@@ -43,23 +44,21 @@ class TestRoutes(TestCase):
             ('users:signup'),
         )
         for name in urls:
-            self.client.force_login(self.reader)
             with self.subTest(name=name):
                 url = reverse(name)
-                response = self.client.get(url)
+                response = self.auth_reader.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_availability_for_note_edit_and_delete(self):
         users_statuses = (
-            (self.author, HTTPStatus.OK),
-            (self.reader, HTTPStatus.NOT_FOUND),
+            (self.auth_author, HTTPStatus.OK),
+            (self.auth_reader, HTTPStatus.NOT_FOUND),
         )
         for user, status in users_statuses:
-            self.client.force_login(user)
             for name in ('notes:detail', 'notes:edit', 'notes:delete'):
                 with self.subTest(user=user, name=name):
                     url = reverse(name, args=(self.note.slug,))
-                    response = self.client.get(url)
+                    response = user.get(url)
                     self.assertEqual(response.status_code, status)
 
     def test_redirect_for_anonymous_client(self):

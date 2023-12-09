@@ -1,11 +1,13 @@
-import pytest
 from datetime import datetime, timedelta
 
-from django.utils import timezone
-from news.models import News, Comment
+import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.test import Client
+from django.urls import reverse
+from django.utils import timezone
 
-from yanews.settings import NEWS_COUNT_ON_HOME_PAGE
+from news.models import Comment, News
 
 COMMENT_COUNT = 5
 User = get_user_model()
@@ -17,7 +19,8 @@ def author(django_user_model):
 
 
 @pytest.fixture
-def author_client(author, client):
+def author_client(author):
+    client = Client()
     client.force_login(author)
     return client
 
@@ -48,26 +51,38 @@ def create_many_news():
         News(title=f'Новсть {index}',
              text='Текст новости',
              date=today - timedelta(days=index))
-        for index in range(NEWS_COUNT_ON_HOME_PAGE + 1)
+        for index in range(settings.NEWS_COUNT_ON_HOME_PAGE + 1)
     ]
     News.objects.bulk_create(all_news)
-    return all_news
 
 
 @pytest.fixture
-def create_many_comments():
-    author = User.objects.create(username='username')
-    news = News.objects.create(title='Новость', text='Текст')
+def create_many_comments(news, author):
+    author = author
+    news = news
     now = timezone.now()
-    all_comments = [
-        Comment(news=news, text=f'комментарий {index}', author=author,
-                created=now - timedelta(days=index))
-        for index in range(COMMENT_COUNT)
-    ]
-    Comment.objects.bulk_create(all_comments)
-    return all_comments
+    for index in range(COMMENT_COUNT):
+        all_comments = Comment(news=news, text=f'комментарий {index}',
+                               author=author)
+        all_comments.created = now - timedelta(days=index)
+        all_comments.save()
 
 
 @pytest.fixture
-def form_data(news):
-    return {'text': 'Новый текст', 'news': news}
+def detail_url(news):
+    return reverse('news:detail', args=(news.id,))
+
+
+@pytest.fixture
+def edit_url(news):
+    return reverse('news:edit', args=(news.id,))
+
+
+@pytest.fixture
+def delete_url(news):
+    return reverse('news:delete', args=(news.id,))
+
+
+@pytest.fixture
+def home_url():
+    return reverse('news:home')

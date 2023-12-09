@@ -1,15 +1,11 @@
 from http import HTTPStatus
-from pytils.translit import slugify
 
-from django.test import TestCase
-from django.urls import reverse
-from notes.models import Note
 from django.contrib.auth import get_user_model
-from django.urls import reverse
 from django.test import Client, TestCase
-
+from django.urls import reverse
 from notes.forms import WARNING
-
+from notes.models import Note
+from pytils.translit import slugify
 
 User = get_user_model()
 
@@ -26,7 +22,6 @@ class TestRoutes(TestCase):
         cls.auth_client.force_login(cls.user)
         cls.form_data = {'title': 'Заголовок form_data',
                          'text': 'Текст form_data', 'slug': 'slugform'}
-        cls.note_count_before_change = Note.objects.count()
         cls.note = Note.objects.create(title='Заголовок0', text='Текст',
                                        slug='slug10', author=cls.user)
         cls.note_count_after_fixtures = Note.objects.count()
@@ -39,6 +34,11 @@ class TestRoutes(TestCase):
         self.auth_client.post(self.add_url, data=self.form_data)
         self.assertEqual(Note.objects.count(),
                          self.note_count_after_fixtures + 1)
+        note_last = Note.objects.last()
+        self.assertEqual(note_last.title, self.form_data['title'])
+        self.assertEqual(note_last.text, self.form_data['text'])
+        self.assertEqual(note_last.slug, self.form_data['slug'])
+        self.assertEqual(note_last.author, self.user)
 
     def test_anonymus_user_cant_create_note(self):
         self.client.post(self.add_url, data=self.form_data)
@@ -58,16 +58,20 @@ class TestRoutes(TestCase):
                          self.note_count_after_fixtures)
 
     def test_user_cant_edit_note(self):
+        note_bofore_change = self.note
         response = self.auth_reader.post(self.edit_url, data=self.form_data)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         self.note.refresh_from_db()
-        self.assertEqual(self.note.text, 'Текст')
+        self.assertEqual(self.note, note_bofore_change)
 
     def test_author_can_edit_note(self):
         response = self.auth_client.post(self.edit_url, data=self.form_data)
         self.assertRedirects(response, self.succes_url)
         self.note.refresh_from_db()
         self.assertEqual(self.note.text, self.form_data['text'])
+        self.assertEqual(self.note.title, self.form_data['title'])
+        self.assertEqual(self.note.slug, self.form_data['slug'])
+        self.assertEqual(self.note.author, self.user)
 
     def test_not_unique_slug(self):
         form_data = self.form_data
