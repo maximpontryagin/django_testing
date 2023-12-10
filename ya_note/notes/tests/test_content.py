@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
+
 from notes.forms import NoteForm
 from notes.models import Note
 
@@ -26,14 +27,16 @@ class TestRoutes(TestCase):
             (self.auth_reader, False),
         )
         for user, result in users_result:
-            response = user.get(reverse('notes:list'))
-            object_context = response.context['object_list']
-            self.assertIs((self.note in object_context), result)
+            with self.subTest(user=user, result=result):
+                response = user.get(reverse('notes:list'))
+                object_context = response.context['object_list']
+                self.assertIs((self.note in object_context), result)
 
     def test_authorized_client_has_form(self):
         urls = (('notes:add', None), ('notes:edit', (self.note.slug,)),)
         for url, args in urls:
-            self.client.force_login(self.author)
-            response = self.client.get(reverse(url, args=args))
-            self.assertIn('form', response.context)
-            self.assertIsInstance(response.context['form'], NoteForm, msg=None)
+            with self.subTest(url=url):
+                response = self.auth_author.get(reverse(url, args=args))
+                self.assertIn('form', response.context)
+                self.assertIsInstance(response.context['form'],
+                                      NoteForm, msg=None)

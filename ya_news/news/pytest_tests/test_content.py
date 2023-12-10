@@ -25,8 +25,8 @@ def test_check_comment_form_for_auth_user(admin_client, news, detail_url):
 
 def test_news_oreder(client, create_many_news, home_url):
     response = client.get(home_url)
-    object_list = response.context['object_list']
-    all_dates = [news.date for news in object_list]
+    object_context = response.context['object_list']
+    all_dates = [news.date for news in object_context]
     sorted_dates = sorted(all_dates, reverse=True)
     assert all_dates == sorted_dates
 

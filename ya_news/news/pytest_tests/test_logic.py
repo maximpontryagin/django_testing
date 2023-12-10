@@ -2,10 +2,9 @@ from http import HTTPStatus
 from random import choice
 
 import pytest
-from django.urls import reverse
-from pytest_django.asserts import assertRedirects
+from pytest_django.asserts import assertRedirects, assertFormError
 
-from news.forms import BAD_WORDS
+from news.forms import BAD_WORDS, WARNING
 from news.models import Comment
 
 pytestmark = pytest.mark.django_db
@@ -69,11 +68,9 @@ def test_auth_cant_delete_comment(admin_client, comment, delete_url):
     assert comments_count_before - Comment.objects.count() == 0
 
 
-@pytest.mark.parametrize('bad_word', BAD_WORDS)
-def test_user_cant_use_bad_words(admin_client, bad_word):
+def test_user_cant_use_bad_words(admin_client, detail_url):
     comments_count_before = Comment.objects.count()
-    bad_words_data = {'text': f'Какой-то текст, {choice(bad_word)}, еще текст'}
-    url = reverse('news:detail', args=('1'))
-    response = admin_client.post(url, data=bad_words_data)
-    assert 'form' not in response.context
+    bad_words_data = {'text': f'текст, {choice(BAD_WORDS)}, еще текст'}
+    response = admin_client.post(detail_url, data=bad_words_data)
+    assertFormError(response, form='form', field='text', errors=WARNING)
     assert Comment.objects.count() == comments_count_before

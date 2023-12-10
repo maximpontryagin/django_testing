@@ -70,7 +70,7 @@ def create_many_comments(news, author):
 
 @pytest.fixture
 def detail_url(news):
-    return reverse('news:detail', args=(news.id,))
+    return reverse('news:detail', args=('1'))
 
 
 @pytest.fixture
@@ -86,3 +86,18 @@ def delete_url(news):
 @pytest.fixture
 def home_url():
     return reverse('news:home')
+
+
+@pytest.fixture
+def login_url():
+    return reverse('users:login')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
+
+
+@pytest.fixture
+def signup_url():
+    return reverse('users:signup')
